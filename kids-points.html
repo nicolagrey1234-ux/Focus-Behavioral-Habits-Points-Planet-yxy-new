@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>⭐ 我的积分星球 v3</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --orange: #FF6B35; --yellow: #FFD166; --green: #06D6A0;
+    --blue: #118AB2; --pink: #EF476F; --purple: #9B5DE5;
+    --bg: #FFF7E6; --text: #333; --text-light: #888; --card: #FFF;
+  }
+  body {
+    font-family: 'Noto Sans SC', sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .top-bar {
+    background: linear-gradient(135deg, var(--orange), var(--pink));
+    color: #FFF; padding: 14px 18px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 4px 15px rgba(255,107,53,0.25);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .top-bar h1 { font-size: 20px; font-weight: 900; letter-spacing: 0.5px; }
+  .top-bar .score-badge {
+    background: rgba(255,255,255,0.25); border-radius: 20px;
+    padding: 6px 14px; font-size: 15px; font-weight: 700;
+    backdrop-filter: blur(4px);
+  }
+  .tab-bar {
+    display: flex; background: var(--card);
+    border-bottom: 3px solid var(--yellow);
+    position: sticky; top: 52px; z-index: 99;
+  }
+  .tab-btn {
+    flex: 1; padding: 11px 0; text-align: center;
+    font-size: 13px; font-weight: 700; border: none;
+    background: var(--card); color: var(--text-light);
+    cursor: pointer; transition: all 0.2s;
+    border-bottom: 3px solid transparent;
+    position: relative;
+  }
+  .tab-btn.active { color: var(--orange); border-bottom-color: var(--orange); background: #FFF8F0; }
+  .tab-btn .badge {
+    position: absolute; top: 4px; right: 18%;
+    background: var(--pink); color: #FFF; font-size: 10px;
+    min-width: 16px; height: 16px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 4px; font-weight: 900;
+  }
+  .tab-btn .badge.hide { display: none; }
+  .page { display: none; padding: 14px; max-width: 520px; margin: 0 auto; }
+  .page.active { display: block; }
+  .score-card {
+    background: linear-gradient(135deg, var(--orange), #FF8C42);
+    color: #FFF; border-radius: 20px; padding: 22px 20px 18px;
+    text-align: center; margin-bottom: 16px;
+    box-shadow: 0 8px 25px rgba(255,107,53,0.25);
+    position: relative; overflow: hidden;
+  }
+  .score-card::after {
+    content: '⭐'; position: absolute; font-size: 70px;
+    opacity: 0.1; top: -8px; right: 5px;
+  }
+  .score-card .label { font-size: 13px; opacity: 0.85; margin-bottom: 2px; }
+  .score-card .total { font-size: 52px; font-weight: 900; line-height: 1.1; }
+  .score-card .unit { font-size: 14px; opacity: 0.85; margin-top: 2px; }
+  .sec-title {
+    font-size: 15px; font-weight: 700; color: var(--orange);
+    margin: 16px 0 8px; display: flex; align-items: center; gap: 4px;
+  }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .act-btn {
+    border: none; border-radius: 16px; padding: 14px 8px;
+    font-size: 14px; font-weight: 700; color: #FFF;
+    cursor: pointer; display: flex; flex-direction: column;
+    align-items: center; gap: 5px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    transition: transform 0.12s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .act-btn:active { transform: scale(0.93); }
+  .act-btn .ico { font-size: 26px; }
+  .act-btn .nm { font-size: 12px; line-height: 1.2; }
+  .act-btn .pt { font-size: 11px; opacity: 0.8; }
+  .b1 { background: linear-gradient(135deg, #FF6B35, #FF9A5C); }
+  .b2 { background: linear-gradient(135deg, #06D6A0, #2CEAA8); }
+  .prog-box {
+    background: var(--card); border-radius: 14px; padding: 14px;
+    margin-bottom: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+  .prog-box .ptitle { font-size: 14px; font-weight: 700; color: var(--orange); margin-bottom: 8px; }
+  .prog-bar-bg {
+    background: #EEE; border-radius: 10px; height: 18px;
+    overflow: hidden; margin-bottom: 6px;
+  }
+  .prog-bar-fill {
+    height: 100%; border-radius: 10px;
+    background: linear-gradient(90deg, var(--orange), var(--pink));
+    transition: width 0.5s ease;
+  }
+  .prog-box .pdesc { font-size: 12px; color: var(--text-light); }
+  .pend-item {
+    background: var(--card); border-radius: 14px; padding: 12px 14px;
+    margin-bottom: 8px; display: flex; align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    border-left: 4px solid var(--yellow);
+  }
+  .pend-item .pn { font-weight: 700; font-size: 14px; }
+  .pend-item .pt { font-size: 12px; color: var(--text-light); margin-top: 2px; }
+  .pend-item .pb {
+    background: var(--yellow); color: #333; font-size: 11px;
+    font-weight: 700; padding: 2px 8px; border-radius: 8px;
+  }
+  .pend-acts { display: flex; gap: 6px; }
+  .pend-acts button {
+    border: none; border-radius: 10px; padding: 7px 12px;
+    font-size: 12px; font-weight: 700; cursor: pointer; color: #FFF;
+  }
+  .pa-ok { background: var(--green); }
+  .pa-no { background: #CCC; color: #666; }
+  .empty { text-align: center; padding: 40px 20px; color: var(--text-light); font-size: 14px; }
+  .empty .eico { font-size: 44px; margin-bottom: 8px; }
+  .log-item {
+    background: var(--card); border-radius: 12px; padding: 10px 14px;
+    margin-bottom: 6px; display: flex; align-items: center; gap: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.04);
+  }
+  .log-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .log-name { flex: 1; font-size: 13px; font-weight: 700; }
+  .log-time { font-size: 11px; color: var(--text-light); }
+  .log-pts { font-weight: 900; font-size: 15px; }
+  .log-pts.minus { color: var(--pink); }
+  .log-pts.plus { color: var(--orange); }
+  .chart-box {
+    background: var(--card); border-radius: 16px; padding: 14px;
+    margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+  .chart-box h3 { font-size: 14px; font-weight: 700; color: var(--orange); margin-bottom: 10px; }
+  .reward-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .rw-card {
+    background: var(--card); border-radius: 14px; padding: 14px 10px;
+    text-align: center; box-shadow: 0 3px 8px rgba(0,0,0,0.06);
+    border: 2px solid transparent; transition: border-color 0.2s;
+  }
+  .rw-card.ok { border-color: var(--green); }
+  .rw-card .rico { font-size: 30px; margin-bottom: 4px; }
+  .rw-card .rnm { font-size: 12px; font-weight: 700; }
+  .rw-card .rcost { font-size: 11px; color: var(--orange); font-weight: 700; margin: 2px 0 6px; }
+  .rw-card button {
+    border: none; border-radius: 10px; padding: 5px 12px;
+    font-size: 11px; font-weight: 700; cursor: pointer;
+    font-family: inherit; color: #FFF;
+  }
+  .rw-card button:disabled { background: #DDD; color: #999; cursor: not-allowed; }
+  .rb-ok { background: var(--green); }
+  .rb-no { background: #CCC; color: #777; }
+  .add-form {
+    background: var(--card); border-radius: 16px; padding: 14px;
+    margin-bottom: 14px; box-shadow: 0 3px 8px rgba(0,0,0,0.06);
+  }
+  .add-form h3 { font-size: 14px; font-weight: 700; color: var(--purple); margin-bottom: 10px; }
+  .add-form input {
+    width: 100%; padding: 10px 12px; border: 2px solid #E8E8E8;
+    border-radius: 10px; font-size: 14px; outline: none;
+    font-family: inherit; margin-bottom: 8px;
+  }
+  .add-form input:focus { border-color: var(--purple); }
+  .add-form button {
+    background: var(--purple); color: #FFF; border: none;
+    border-radius: 10px; padding: 10px 0; width: 100%;
+    font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit;
+  }
+  .fab {
+    position: fixed; bottom: 22px; right: 18px;
+    width: 52px; height: 52px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--blue), var(--purple));
+    color: #FFF; border: none; font-size: 22px;
+    cursor: pointer; box-shadow: 0 4px 12px rgba(17,138,178,0.35);
+    z-index: 200; display: flex; align-items: center; justify-content: center;
+    transition: transform 0.15s;
+  }
+  .fab:active { transform: scale(0.9); }
+  .mo-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45); z-index: 999;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .mo-overlay.show { display: flex; }
+  .mo {
+    background: #FFF; border-radius: 20px; padding: 22px 20px;
+    width: 100%; max-width: 340px; text-align: center;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+  }
+  .mo h2 { font-size: 17px; margin-bottom: 12px; color: var(--orange); }
+  .mo p { font-size: 13px; color: #777; margin-bottom: 14px; line-height: 1.5; }
+  .mo input {
+    width: 100%; padding: 11px; border: 2px solid #E8E8E8;
+    border-radius: 10px; font-size: 16px; text-align: center;
+    outline: none; font-family: inherit; margin-bottom: 14px;
+    letter-spacing: 6px;
+  }
+  .mo input:focus { border-color: var(--orange); }
+  .mo .btn-row { display: flex; gap: 10px; }
+  .mo .btn-row button {
+    flex: 1; padding: 11px; border: none; border-radius: 10px;
+    font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit;
+  }
+  .mo .bc { background: #EEE; color: #666; }
+  .mo .bo { background: var(--orange); color: #FFF; }
+  .parent-panel {
+    position: fixed; inset: 0; background: var(--bg); z-index: 998;
+    overflow-y: auto; display: none;
+  }
+  .parent-panel.show { display: block; }
+  .pp-header {
+    background: linear-gradient(135deg, var(--blue), var(--purple));
+    color: #FFF; padding: 16px 18px; display: flex;
+    align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 10;
+  }
+  .pp-header h2 { font-size: 17px; font-weight: 900; }
+  .pp-close {
+    background: rgba(255,255,255,0.2); border: none; color: #FFF;
+    width: 36px; height: 36px; border-radius: 50%;
+    font-size: 18px; cursor: pointer;
+  }
+  .pp-body { padding: 14px; max-width: 520px; margin: 0 auto; }
+  .pp-section {
+    background: var(--card); border-radius: 14px; padding: 14px;
+    margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  }
+  .pp-section h3 { font-size: 14px; font-weight: 700; color: var(--blue); margin-bottom: 10px; }
+  .pp-section button {
+    border: none; border-radius: 10px; padding: 10px 16px;
+    font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+    color: #FFF; margin: 4px 6px 4px 0;
+  }
+  .pp-btn-green { background: var(--green); }
+  .pp-btn-pink { background: var(--pink); }
+  .pp-btn-blue { background: var(--blue); }
+  .pp-btn-purple { background: var(--purple); }
+  .pp-reward-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 0; border-bottom: 1px solid #F0F0F0;
+  }
+  .pp-reward-item:last-child { border-bottom: none; }
+  .pp-reward-item .pp-rn { font-size: 13px; font-weight: 700; }
+  .pp-reward-item .pp-rc { font-size: 12px; color: var(--orange); font-weight: 700; }
+  .pp-reward-item button { background: var(--pink); color: #FFF; border: none; border-radius: 8px; padding: 4px 10px; font-size: 11px; cursor: pointer; font-family: inherit; }
+  .pp-task-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 0; border-bottom: 1px solid #F0F0F0;
+  }
+  .pp-task-item:last-child { border-bottom: none; }
+  .pp-task-item .pp-tn { font-size: 13px; font-weight: 700; }
+  .pp-task-item .pp-tc { font-size: 12px; color: var(--orange); font-weight: 700; }
+  .pp-task-item .pp-tcat { font-size: 11px; color: var(--text-light); }
+  .pp-task-item button { background: var(--pink); color: #FFF; border: none; border-radius: 8px; padding: 4px 10px; font-size: 11px; cursor: pointer; font-family: inherit; }
+  .pp-add-form { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .pp-add-form input {
+    padding: 8px 10px; border: 2px solid #E8E8E8; border-radius: 8px;
+    font-size: 13px; outline: none; font-family: inherit;
+  }
+  .pp-add-form input:focus { border-color: var(--purple); }
+  .pp-add-form .pp-row { display: flex; gap: 6px; }
+  .pp-add-form .pp-row input { flex: 1; }
+  .pp-add-form select {
+    border: 2px solid #E8E8E8; border-radius: 8px; padding: 0 8px;
+    font-size: 13px; font-family: inherit; outline: none;
+  }
+  .pp-add-form button {
+    background: var(--purple); color: #FFF; border: none;
+    border-radius: 8px; padding: 8px; font-size: 13px;
+    font-weight: 700; cursor: pointer; font-family: inherit;
+  }
+  @keyframes pop {
+    0% { transform: scale(0.6); opacity: 0; }
+    70% { transform: scale(1.15); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .pop { animation: pop 0.35s ease-out; }
+  @keyframes slideUp {
+    from { transform: translateY(16px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .slide { animation: slideUp 0.25s ease-out; }
+  .fw-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 9998; }
+  .toast {
+    position: fixed; bottom: 76px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.78); color: #FFF; padding: 10px 22px;
+    border-radius: 24px; font-size: 13px; font-weight: 700;
+    z-index: 99999; animation: pop 0.25s; white-space: nowrap;
+    pointer-events: none;
+  }
+  @media (min-width: 500px) {
+    .top-bar h1 { font-size: 22px; }
+    .tab-btn { font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 普通界面 -->
+<div id="normalUI">
+  <div class="top-bar">
+    <h1>⭐ 我的积分星球</h1>
+    <div class="score-badge" id="topScore">⭐ 200</div>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="goTab('home')">🏠 攒积分</button>
+    <button class="tab-btn" onclick="goTab('log')">📜 记录</button>
+    <button class="tab-btn" onclick="goTab('reward')">🎁 奖励</button>
+    <button class="tab-btn" id="tabPend" onclick="goTab('pend')">
+      待确认<span class="badge hide" id="pendBadge">0</span>
+    </button>
+  </div>
+
+  <div class="page active" id="pg-home">
+    <div class="score-card pop">
+      <div class="label">当前总积分</div>
+      <div class="total" id="totalScore">200</div>
+      <div class="unit">积分 ⭐</div>
+    </div>
+
+    <div class="sec-title">🍅 专注力（完成一个 +2分）</div>
+    <div class="grid2" id="focusTasks"></div>
+
+    <div class="sec-title">🪥 卫生习惯（完成一个 +1分）</div>
+    <div class="grid2" id="hygieneTasks"></div>
+
+    <div class="prog-box">
+      <div class="ptitle">🍅 本周番茄钟进度</div>
+      <div class="prog-bar-bg"><div class="prog-bar-fill" id="wkBar" style="width:0%"></div></div>
+      <div class="pdesc">已完成 <b id="wkDone">0</b> / 20 个，达标额外 <span style="color:var(--pink);font-weight:700;">+20分</span>！</div>
+    </div>
+  </div>
+
+  <div class="page" id="pg-log">
+    <div class="chart-box">
+      <h3>📈 积分增长曲线</h3>
+      <canvas id="scoreChart" height="180"></canvas>
+    </div>
+    <div class="sec-title">📜 积分明细</div>
+    <div id="logList"></div>
+  </div>
+
+  <div class="page" id="pg-reward">
+    <div class="add-form">
+      <h3>➕ 添加新奖励</h3>
+      <input type="text" id="newRName" placeholder="奖励名称，如：冰淇淋">
+      <input type="number" id="newRCost" placeholder="需要多少积分" min="1">
+      <button onclick="addReward()">添加奖励 ✅</button>
+    </div>
+    <div class="sec-title">🎁 可兑换奖励</div>
+    <div class="reward-grid" id="rewardGrid"></div>
+  </div>
+
+  <div class="page" id="pg-pend">
+    <div class="sec-title">📥 等待爸爸妈妈确认</div>
+    <div id="pendList"></div>
+  </div>
+
+  <button class="fab" onclick="showPwd('parent')" title="家长入口">🔐</button>
+</div>
+
+<!-- 家长面板 -->
+<div class="parent-panel" id="parentPanel">
+  <div class="pp-header">
+    <h2>🔐 家长面板</h2>
+    <button class="pp-close" onclick="closeParentPanel()">✕</button>
+  </div>
+  <div class="pp-body">
+    <div class="pp-section">
+      <h3>📥 待确认积分（<span id="ppPendCount">0</span>条）</h3>
+      <div id="ppPendList"></div>
+      <div class="empty" id="ppPendEmpty" style="display:none;">暂无待确认事项</div>
+    </div>
+
+    <div class="pp-section">
+      <h3>🍅 本周番茄钟</h3>
+      <p style="font-size:13px;color:#666;margin-bottom:10px;">本周已完成 <b id="ppWkCount">0</b> 个，达标自动发放+20分奖励。</p>
+      <button class="pp-btn-green" onclick="resetWeek()">重置本周计数</button>
+    </div>
+
+    <div class="pp-section">
+      <h3>🎁 奖励管理</h3>
+      <div id="ppRewardList"></div>
+    </div>
+
+    <div class="pp-section">
+      <h3>⭐ 任务管理</h3>
+      <p style="font-size:12px;color:#888;margin-bottom:8px;">自定义攒积分项目，孩子点击后需家长确认。可随时增删。</p>
+      <div id="ppTaskList"></div>
+      <div class="pp-add-form">
+        <input type="text" id="newTName" placeholder="任务名称，如：帮妈妈洗碗">
+        <div class="pp-row">
+          <input type="number" id="newTPts" placeholder="积分" min="1" style="width:80px;">
+          <select id="newTCat">
+            <option value="focus">🍅 专注力类</option>
+            <option value="hygiene">🪥 卫生习惯类</option>
+          </select>
+        </div>
+        <button onclick="addTask()">添加任务 ✅</button>
+      </div>
+    </div>
+
+    <div class="pp-section">
+      <h3>⚙️ 设置</h3>
+      <button class="pp-btn-purple" onclick="showPwd('chgPwd')">修改家长密码</button>
+      <button class="pp-btn-pink" onclick="resetAll()" style="margin-top:8px;">重置所有数据</button>
+      <button class="pp-btn-blue" onclick="addBasePoints()" style="margin-top:8px;">补充基础积分（+200分）</button>
+    </div>
+  </div>
+</div>
+
+<!-- 密码弹窗 -->
+<div class="mo-overlay" id="pwdMo">
+  <div class="mo">
+    <h2 id="pwdTitle">🔐 家长验证</h2>
+    <p id="pwdHint">请输入4位家长密码（默认1234）</p>
+    <input type="password" id="pwdInput" maxlength="4" inputmode="numeric" pattern="[0-9]*">
+    <div class="btn-row">
+      <button class="bc" onclick="closePwdMo()">取消</button>
+      <button class="bo" onclick="checkPwd()">确认</button>
+    </div>
+  </div>
+</div>
+
+<!-- 兑换确认弹窗 -->
+<div class="mo-overlay" id="redeemMo">
+  <div class="mo">
+    <h2>🎁 确认兑换</h2>
+    <p id="redeemHint"></p>
+    <div class="btn-row">
+      <button class="bc" onclick="closeRedeemMo()">取消</button>
+      <button class="bo" onclick="doRedeem()">确认兑换</button>
+    </div>
+  </div>
+</div>
+
+<!-- 周奖励达标弹窗 -->
+<div class="mo-overlay" id="weekBonusMo">
+  <div class="mo">
+    <h2>🏆 太棒了！</h2>
+    <p>本周已完成20个番茄钟！<br>确认给宝贝发放 <b style="color:var(--pink);font-size:18px;">+20分</b> 奖励吗？</p>
+    <div class="btn-row">
+      <button class="bo" onclick="giveWeekBonus()">确认发放 🎉</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// 清理旧版本缓存数据
+(function(){
+  try { localStorage.removeItem('kids_points_v2'); } catch(e){}
+  try { localStorage.removeItem('kids_points_v1'); } catch(e){}
+  try { localStorage.removeItem('kids_points'); } catch(e){}
+})();
+
+// ============ 数据 ============
+const K = 'kids_points_v3';
+function ld() {
+  try {
+    var raw = localStorage.getItem(K);
+    if (raw) {
+      var d = JSON.parse(raw);
+      // 版本迁移：旧版 v1/v2 数据升级
+      if (!d.tasks || !d.baseGiven) {
+        // 旧版或损坏的数据，用默认值重新初始化
+        var nd = df();
+        if (d.score && d.score > nd.score) nd.score = d.score; // 保留更高积分
+        if (d.logs && d.logs.length) nd.logs = d.logs; // 保留日志
+        if (d.pwd) nd.pwd = d.pwd; // 保留自定义密码
+        if (d.rewards && d.rewards.length) nd.rewards = d.rewards; // 保留奖励
+        return nd;
+      }
+      return d;
+    }
+  } catch(e){ console.error('load error', e); }
+  return df();
+}
+function df() { return {
+  score: 200, logs: [], pend: [],
+  tasks: [
+    { n:'番茄钟 20分钟', p:2, e:'🍅', cat:'focus' },
+    { n:'语文阅读 20分钟', p:2, e:'📖', cat:'focus' },
+    { n:'英语阅读 20分钟', p:2, e:'📘', cat:'focus' },
+    { n:'运动20分钟', p:2, e:'⚽', cat:'focus' },
+    { n:'整理床铺', p:1, e:'🛏️', cat:'hygiene' },
+    { n:'回家洗手', p:1, e:'🧼', cat:'hygiene' },
+    { n:'玩具收好', p:1, e:'🧸', cat:'hygiene' },
+    { n:'整理书桌', p:1, e:'📝', cat:'hygiene' },
+    { n:'书本保持整洁', p:1, e:'📚', cat:'hygiene' },
+  ],
+  rewards: [
+    { n:'零食小奖励', c:15, e:'🍭' },
+    { n:'多玩15分钟', c:15, e:'🎮' },
+    { n:'小玩具', c:80, e:'🧸' },
+    { n:'篮球/足球', c:80, e:'⚽' },
+    { n:'周末郊游', c:300, e:'🏕️' },
+  ],
+  pwd: '1234',
+  wkCount: 0, wkReset: wkStart(), wkBonusGiven: false,
+  baseGiven: true,
+};}
+function sv() { localStorage.setItem(K, JSON.stringify(D)); }
+let D = ld();
+
+function wkStart() {
+  const d = new Date(), day = d.getDay();
+  d.setDate(d.getDate() - day + (day===0?-6:1));
+  d.setHours(0,0,0,0); return d.getTime();
+}
+function chkWeek() {
+  if (Date.now() > D.wkReset + 7*86400000) {
+    D.wkCount = 0; D.wkBonusGiven = false; D.wkReset = wkStart(); sv();
+  }
+}
+
+// ============ Tab ============
+let curTab = 'home';
+function goTab(t) {
+  curTab = t;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('pg-'+t).classList.add('active');
+  document.querySelectorAll('.tab-btn')[t==='pend'?3:['home','log','reward'].indexOf(t)].classList.add('active');
+  if(t==='log') renderLog();
+  if(t==='reward') renderRewards();
+  if(t==='pend') renderPend();
+  if(t==='home') updHome();
+}
+
+// ============ 主页 ============
+function updHome() {
+  renderTasks();
+  chkWeek();
+  document.getElementById('totalScore').textContent = D.score;
+  document.getElementById('topScore').textContent = '\u2B50 ' + D.score;
+  const pct = Math.min(100, D.wkCount/20*100);
+  document.getElementById('wkBar').style.width = pct+'%';
+  document.getElementById('wkDone').textContent = D.wkCount;
+  const b = document.getElementById('pendBadge');
+  if (D.pend.length > 0) { b.classList.remove('hide'); b.textContent = D.pend.length; }
+  else { b.classList.add('hide'); }
+}
+
+// ============ 渲染任务按钮 ============
+function renderTasks() {
+  const focusEl = document.getElementById('focusTasks');
+  const hygEl = document.getElementById('hygieneTasks');
+  if (!focusEl || !hygEl) return;
+
+  const focusTasks = D.tasks.filter(function(t) { return t.cat === 'focus'; });
+  const hygTasks = D.tasks.filter(function(t) { return t.cat === 'hygiene'; });
+
+  focusEl.innerHTML = '';
+  for (var fi = 0; fi < focusTasks.length; fi++) {
+    (function(t, idx) {
+      var btn = document.createElement('button');
+      btn.className = 'act-btn b1';
+      btn.innerHTML = '<span class="ico">' + t.e + '</span><span class="nm">' + t.n + '</span><span class="pt">+' + t.p + '分</span>';
+      btn.onclick = function() { reqPts(t.n, t.p); };
+      focusEl.appendChild(btn);
+    })(focusTasks[fi], fi);
+  }
+
+  hygEl.innerHTML = '';
+  for (var hi = 0; hi < hygTasks.length; hi++) {
+    (function(t, idx) {
+      var btn = document.createElement('button');
+      btn.className = 'act-btn b2';
+      btn.innerHTML = '<span class="ico">' + t.e + '</span><span class="nm">' + t.n + '</span><span class="pt">+' + t.p + '分</span>';
+      btn.onclick = function() { reqPts(t.n, t.p); };
+      hygEl.appendChild(btn);
+    })(hygTasks[hi], hi);
+  }
+}
+
+// ============ 请求积分 ============
+function reqPts(name, pts) {
+  D.pend.push({ id: Date.now(), n: name, p: pts, t: new Date().toLocaleString('zh-CN') });
+  sv(); renderPend(); goTab('pend');
+  toast('\u5DF2\u63D0\u4EA4\uFF0C\u7B49\u7238\u7238\u5988\u5988\u786E\u8BA4 \u270B');
+}
+
+// ============ 待确认 ============
+function renderPend() {
+  var el = document.getElementById('pendList');
+  if (!D.pend.length) { el.innerHTML = '<div class="empty"><div class="eicon">\uD83C\uDF89</div>\u592A\u68D2\u4E86\uFF0C\u6CA1\u6709\u5F85\u786E\u8BA4\u7684\u4E86\uFF01</div>'; return; }
+  el.innerHTML = '';
+  for (var i = 0; i < D.pend.length; i++) {
+    (function(item) {
+      var div = document.createElement('div');
+      div.className = 'pend-item slide';
+      div.innerHTML =
+        '<div><div class="pn">' + item.n + '</div><div class="pt">' + item.t + '</div></div>' +
+        '<div style="display:flex;align-items:center;gap:8px;">' +
+        '<span class="pb">+' + item.p + '\u5206</span>' +
+        '<div class="pend-acts">' +
+        '<button class="pa-ok" onclick="pwdForConfirm(' + item.id + ')">\u2705</button>' +
+        '<button class="pa-no" onclick="rejectPend(' + item.id + ')">\u274C</button>' +
+        '</div></div>';
+      el.appendChild(div);
+    })(D.pend[i]);
+  }
+}
+
+function rejectPend(id) {
+  D.pend = D.pend.filter(function(i){return i.id!==id;});
+  sv(); renderPend(); updHome();
+  toast('\u5DF2\u53D6\u6D88 \u274C');
+}
+
+// ============ 家长密码 ============
+var pwdPurpose = '', pwdPayload = null;
+function showPwd(purpose, payload) {
+  pwdPurpose = purpose; pwdPayload = payload;
+  document.getElementById('pwdInput').value = '';
+  var titles = {'parent':'\uD83D\uDD10 \u5BB6\u95BF\u9A8C\u8BC1','chgPwd':'\uD83D\uDD10 \u8F93\u5165\u539F\u5BC6\u7801','redeem':'\uD83D\uDD10 \u5BB6\u95BF\u786E\u8BA4\u5151\u6362'};
+  document.getElementById('pwdTitle').textContent = titles[purpose] || '\uD83D\uDD10 \u5BB6\u95BF\u9A8C\u8BC1';
+  document.getElementById('pwdMo').classList.add('show');
+  setTimeout(function(){document.getElementById('pwdInput').focus();}, 100);
+}
+function closePwdMo() { document.getElementById('pwdMo').classList.remove('show'); }
+function checkPwd() {
+  var v = document.getElementById('pwdInput').value;
+  if (v !== D.pwd) { toast('\u5BC6\u7801\u9519\u8BEF \u274C'); return; }
+  closePwdMo();
+  if (pwdPurpose === 'parent') openParentPanel();
+  else if (pwdPurpose === 'chgPwd') openChgPwd();
+  else if (pwdPurpose === 'confirm') doConfirmPend(pwdPayload);
+  else if (pwdPurpose === 'redeem') openRedeemMo(pwdPayload);
+}
+
+// ============ 确认积分 ============
+function pwdForConfirm(id) { showPwd('confirm', id); }
+
+function doConfirmPend(id) {
+  var i = D.pend.find(function(x){return x.id===id;}); if (!i) return;
+  D.score += i.p;
+  D.logs.unshift({ type:'earn', n:i.n, p:i.p, t:i.t });
+  var task = D.tasks.find(function(t){return t.n===i.n;});
+  if (task && task.cat === 'focus') {
+    chkWeek(); D.wkCount++;
+    sv();
+    if (D.wkCount >= 20 && !D.wkBonusGiven) {
+      setTimeout(function(){ document.getElementById('weekBonusMo').classList.add('show'); }, 400);
+    }
+  }
+  D.pend = D.pend.filter(function(x){return x.id!==id;});
+  sv();
+  renderPend(); updHome(); fw();
+  toast('\u79EF\u5206\u5165\u8D26 +' + i.p + '\u5206 \u2705');
+}
+
+function giveWeekBonus() {
+  document.getElementById('weekBonusMo').classList.remove('show');
+  D.score += 20;
+  D.wkBonusGiven = true;
+  D.logs.unshift({ type:'earn', n:'\uD83C\uDFC6 \u4E00\u546820\u4E2A\u756A\u8304\u949F\u5956\u52B1', p:20, t:new Date().toLocaleString('zh-CN') });
+  sv(); updHome(); fw();
+  toast('\uD83C\uDFC6 \u5468\u5956\u52B1+20\u5206\u5DF2\u53D1\u653E\uFF01');
+}
+
+// ============ 补充基础积分 ============
+function addBasePoints() {
+  if (D.baseGiven) { alert('\u57FA\u7840\u79EF\u5206\u5DF2\u53D1\u653E\u8FC7\uFF0C\u4E0D\u518D\u91CD\u590D\u53D1\u653E\u3002'); return; }
+  D.score += 200;
+  D.logs.unshift({ type:'earn', n:'\u2B50 \u57FA\u7840\u79EF\u5206', p:200, t:new Date().toLocaleString('zh-CN') });
+  D.baseGiven = true;
+  sv(); updHome(); fw();
+  toast('\u57FA\u7840\u79EF\u5206+200\u5DF2\u53D1\u653E \u2B50');
+  renderPP();
+}
+
+// ============ 家长面板 ============
+function openParentPanel() {
+  document.getElementById('normalUI').style.display = 'none';
+  document.getElementById('parentPanel').classList.add('show');
+  renderPP();
+}
+function closeParentPanel() {
+  document.getElementById('parentPanel').classList.remove('show');
+  document.getElementById('normalUI').style.display = '';
+  updHome(); renderPend();
+}
+function renderPP() {
+  chkWeek();
+  document.getElementById('ppPendCount').textContent = D.pend.length;
+  var el = document.getElementById('ppPendList');
+  var em = document.getElementById('ppPendEmpty');
+  if (!D.pend.length) { el.innerHTML=''; em.style.display='block'; }
+  else {
+    em.style.display='none';
+    el.innerHTML = '';
+    for (var pi = 0; pi < D.pend.length; pi++) {
+      (function(i){
+        var div = document.createElement('div');
+        div.className = 'pend-item';
+        div.style.marginBottom = '8px';
+        div.innerHTML =
+          '<div><div class="pn">' + i.n + '</div><div class="pt">' + i.t + '</div></div>' +
+          '<div style="display:flex;align-items:center;gap:8px;">' +
+          '<span class="pb">+' + i.p + '\u5206</span>' +
+          '<button class="pa-ok" onclick="ppConfirm(' + i.id + ')">\u2705 \u786E\u8BA4</button>' +
+          '<button class="pa-no" onclick="ppReject(' + i.id + ')">\u274C</button>' +
+          '</div>';
+        el.appendChild(div);
+      })(D.pend[pi]);
+    }
+  }
+  document.getElementById('ppWkCount').textContent = D.wkCount;
+
+  // 奖励列表
+  var rl = document.getElementById('ppRewardList');
+  rl.innerHTML = '';
+  if (!D.rewards.length) {
+    rl.innerHTML = '<div style="font-size:13px;color:#999;">\u6682\u65E0\u81EA\u5B9A\u4E49\u5956\u52B1</div>';
+  } else {
+    for (var ri = 0; ri < D.rewards.length; ri++) {
+      (function(r, idx) {
+        var div = document.createElement('div');
+        div.className = 'pp-reward-item';
+        div.innerHTML =
+          '<div><span style="font-size:16px;">' + r.e + '</span> ' +
+          '<span class="pp-rn">' + r.n + '</span> ' +
+          '<span class="pp-rc">' + r.c + '\u5206</span></div>' +
+          '<button onclick="ppDelReward(' + idx + ')">\u5220\u9664</button>';
+        rl.appendChild(div);
+      })(D.rewards[ri], ri);
+    }
+  }
+
+  // 任务列表
+  renderPPTasks();
+}
+
+function renderPPTasks() {
+  var el = document.getElementById('ppTaskList');
+  if (!el) return;
+  el.innerHTML = '';
+  if (!D.tasks.length) {
+    el.innerHTML = '<div style="font-size:13px;color:#999;">\u6682\u65E0\u4EFB\u52A1</div>';
+    return;
+  }
+  for (var ti = 0; ti < D.tasks.length; ti++) {
+    (function(t, idx) {
+      var div = document.createElement('div');
+      div.className = 'pp-task-item';
+      var catLabel = t.cat === 'focus' ? '\u4E13\u6CE8\u529B' : '\u536B\u751F\u4E60\u60EF';
+      div.innerHTML =
+        '<div>' +
+        '<span style="font-size:16px;">' + t.e + '</span> ' +
+        '<span class="pp-tn">' + t.n + '</span> ' +
+        '<span class="pp-tc">+' + t.p + '\u5206</span> ' +
+        '<span class="pp-tcat">(\uFF1A' + catLabel + ')</span>' +
+        '</div>' +
+        '<button onclick="delTask(' + idx + ')">\u5220\u9664</button>';
+      el.appendChild(div);
+    })(D.tasks[ti], ti);
+  }
+}
+
+function ppConfirm(id) { doConfirmPend(id); renderPP(); }
+function ppReject(id) { D.pend = D.pend.filter(function(x){return x.id!==id;}); sv(); renderPP(); updHome(); }
+function resetWeek() { D.wkCount = 0; D.wkBonusGiven = false; D.wkReset = wkStart(); sv(); renderPP(); updHome(); toast('\u672C\u5468\u8BA1\u6570\u5DF2\u91CD\u7F6E \uD83D\uDD04'); }
+function ppDelReward(i) { D.rewards.splice(i,1); sv(); renderPP(); renderRewards(); toast('\u5956\u52B1\u5DF2\u5220\u9664'); }
+
+function addTask() {
+  var n = document.getElementById('newTName').value.trim();
+  var p = parseInt(document.getElementById('newTPts').value);
+  var cat = document.getElementById('newTCat').value;
+  if (!n || !p || p <= 0) { toast('\u8BF7\u586B\u5199\u4EFB\u52A1\u540D\u79F0\u548C\u79EF\u5206 \u274C'); return; }
+  var emFocus = ['\uD83C\uDF45','\uD83D\uDCD6','\uD83D\uDCD8','\u26BD\uFE0F','\uD83C\uDFC0','\uD83C\uDFAF','\uD83E\uDDE0','\u270F\uFE0F','\uD83C\uDFB8','\uD83C\uDFA8'];
+  var emHyg  = ['\uD83C\uDFCB\uFE0F','\uD83E\uDEFC','\uD83D\uDCE8','\uD83D\uDCDD','\uD83D\uDCDA','\uD83E\uDED7','\uD83E\uDED1','\uD83E\uDECB','\uD83D\uDEBF','\uD83C\uDF31'];
+  var emPool = cat === 'focus' ? emFocus : emHyg;
+  var usedEm = [];
+  for (var ui = 0; ui < D.tasks.length; ui++) usedEm.push(D.tasks[ui].e);
+  var avail = emPool.filter(function(e){return usedEm.indexOf(e)<0;});
+  var e = avail.length ? avail[Math.floor(Math.random()*avail.length)] : emPool[Math.floor(Math.random()*emPool.length)];
+  D.tasks.push({ n:n, p:p, e:e, cat:cat });
+  sv();
+  document.getElementById('newTName').value = '';
+  document.getElementById('newTPts').value = '';
+  renderPPTasks(); renderTasks();
+  toast('\u4EFB\u52A1\u5DF2\u6DFB\u52A0 \u2705');
+}
+
+function delTask(i) {
+  var t = D.tasks[i]; if (!t) return;
+  if (!confirm('\u786E\u5B9A\u5220\u9664\u4EFB\u52A1\u300C' + t.n + '\u300D\u5417\uFF1F')) return;
+  D.tasks.splice(i, 1);
+  sv();
+  renderPPTasks(); renderTasks();
+  toast('\u4EFB\u52A1\u5DF2\u5220\u9664');
+}
+
+function resetAll() {
+  if (!confirm('\u786E\u5B9A\u8981\u91CD\u7F6E\u6240\u6709\u6570\u636E\u5417\uFF1F\u6B64\u64CD\u4F5C\u4E0D\u53EF\u6062\u590D\uFF01')) return;
+  D = df(); sv(); renderPP(); updHome(); toast('\u6240\u6709\u6570\u636E\u5DF2\u91CD\u7F6E');
+}
+
+// ============ 修改密码 ============
+function openChgPwd() {
+  var old = prompt('\u8BF7\u8F93\u5165\u65B0\u5BC6\u7801\uFF084\u4F4D\u6570\u5B57\uFF09\uFF1A');
+  if (old && /^\d{4}$/.test(old)) {
+    D.pwd = old; sv(); alert('\u5BC6\u7801\u5DF2\u4FEE\u6539\uFF01');
+  } else if (old !== null) alert('\u8BF7\u8F93\u51654\u4F4D\u6570\u5B57\u5BC6\u7801\uFF01');
+}
+
+// ============ 日志 ============
+function renderLog() {
+  updHome();
+  renderChart();
+  var el = document.getElementById('logList');
+  if (!D.logs.length) { el.innerHTML = '<div class="empty"><div class="eicon">\uD83D\uDCE7</div>\u8FD8\u6CA1\u6709\u8BB0\u5F55\u54E6</div>'; return; }
+  el.innerHTML = '';
+  for (var li = 0; li < D.logs.length; li++) {
+    (function(l) {
+      var div = document.createElement('div');
+      div.className = 'log-item slide';
+      var dotColor = l.type === 'earn' ? 'var(--green)' : 'var(--pink)';
+      var cls = l.type === 'redeem' ? 'minus' : 'plus';
+      var sign = l.type === 'earn' ? '+' : '-';
+      div.innerHTML =
+        '<div class="log-dot" style="background:' + dotColor + ';"></div>' +
+        '<div style="flex:1;"><div class="log-name">' + l.n + '</div><div class="log-time">' + l.t + '</div></div>' +
+        '<div class="log-pts ' + cls + '">' + sign + l.p + '\u5206</div>';
+      el.appendChild(div);
+    })(D.logs[li]);
+  }
+}
+
+function renderChart() {
+  var ctx = document.getElementById('scoreChart').getContext('2d');
+  var daily = {};
+  var logsCopy = D.logs.slice().reverse();
+  for (var ci = 0; ci < logsCopy.length; ci++) {
+    var l = logsCopy[ci];
+    var dKey = l.t.split(' ')[0];
+    if (!daily[dKey]) daily[dKey] = { e:0, r:0 };
+    if (l.type==='earn') daily[dKey].e += l.p; else daily[dKey].r += l.p;
+  }
+  var tot = 0, lbs = [], dts = [];
+  Object.keys(daily).forEach(function(k) {
+    tot += daily[k].e - daily[k].r;
+    lbs.push(k.slice(5));
+    dts.push(tot);
+  });
+  if (window._sc) window._sc.destroy();
+  window._sc = new Chart(ctx, {
+    type:'line',
+    data:{ labels: lbs.length?lbs:['--'],
+      datasets:[{ data: dts.length?dts:[0],
+        borderColor:'#FF6B35', backgroundColor:'rgba(255,107,53,0.08)',
+        fill:true, tension:0.35, pointBackgroundColor:'#FF6B35',
+        pointRadius:3, borderWidth:2.5,
+      }]
+    },
+    options:{ responsive:true, plugins:{ legend:{ display:false } },
+      scales:{ y:{ beginAtZero:true, grid:{color:'#F2F2F2'} }, x:{ grid:{display:false} } }
+    }
+  });
+}
+
+// ============ 奖励 ============
+function renderRewards() {
+  updHome();
+  var el = document.getElementById('rewardGrid');
+  el.innerHTML = '';
+  for (var ri = 0; ri < D.rewards.length; ri++) {
+    (function(r, idx) {
+      var ok = D.score >= r.c;
+      var card = document.createElement('div');
+      card.className = 'rw-card slide' + (ok ? ' ok' : '');
+      card.innerHTML =
+        '<div class="rico">' + r.e + '</div>' +
+        '<div class="rnm">' + r.n + '</div>' +
+        '<div class="rcost">' + r.c + ' \u79EF\u5206</div>' +
+        '<button class="rb-ok" ' + (ok?'':'disabled') + ' onclick="startRedeem(' + idx + ')">' +
+        (ok?'\u5151\u6362 \uD83C\uDF89':'\u79EF\u5206\u4E0D\u8DB3') + '</button>';
+      el.appendChild(card);
+    })(D.rewards[ri], ri);
+  }
+}
+
+function addReward() {
+  var n = document.getElementById('newRName').value.trim();
+  var c = parseInt(document.getElementById('newRCost').value);
+  if (!n||!c||c<=0) { toast('\u8BF7\u586B\u5199\u5B8C\u6574 \u274C'); return; }
+  var em = ['\uD83C\uDF81','\uD83C\uDF88','\uD83C\uDF66','\uD83E\uDD81','\uD83C\uDFAF','\uD83C\uDFC7','\u2B50','\uD83C\uDFAA','\uD83C\uDD85','\uD83E\uDD84'];
+  D.rewards.push({ n:n, c:c, e: em[Math.floor(Math.random()*em.length)] });
+  sv();
+  document.getElementById('newRName').value='';
+  document.getElementById('newRCost').value='';
+  renderRewards();
+  toast('\u5956\u52B1\u5DF2\u6DFB\u52A0 \u2705');
+}
+
+var redeemIdx = -1;
+function startRedeem(i) {
+  redeemIdx = i;
+  showPwd('redeem');
+}
+function openRedeemMo() {
+  var r = D.rewards[redeemIdx];
+  document.getElementById('redeemHint').innerHTML =
+    '\u786E\u5B9A\u7528 <b style="color:var(--pink)">' + r.c + '\u79EF\u5206</b> \u5151\u6362\u300C<b>' + r.n + '</b>\u300D\u5417\uFF1F<br><span style="font-size:12px;color:#999;">\u9700\u8981\u5BB6\u95BF\u786E\u8BA4</span>';
+  document.getElementById('redeemMo').classList.add('show');
+}
+function closeRedeemMo() { document.getElementById('redeemMo').classList.remove('show'); }
+
+function doRedeem() {
+  var r = D.rewards[redeemIdx];
+  if (D.score < r.c) { toast('\u79EF\u5206\u4E0D\u8DB3 \u274C'); closeRedeemMo(); return; }
+  D.score -= r.c;
+  D.logs.unshift({ type:'redeem', n:'\uD83C\uDF81 ' + r.n, p:r.c, t:new Date().toLocaleString('zh-CN') });
+  sv(); closeRedeemMo(); renderRewards(); updHome(); fw();
+  toast('\u5151\u6362\u6210\u529F \uD83C\uDF89');
+}
+
+// ============ 烟花 ============
+function fw() {
+  var c = document.createElement('canvas');
+  c.className = 'fw-canvas'; c.width = innerWidth; c.height = innerHeight;
+  document.body.appendChild(c);
+  var X = c.getContext('2d'), pts = [], cols = ['#FF6B35','#FFD166','#06D6A0','#EF476F','#9B5DE5','#118AB2'];
+  for(var i=0;i<35;i++) pts.push({
+    x: innerWidth/2+(Math.random()-.5)*80, y: innerHeight/2+(Math.random()-.5)*80,
+    vx:(Math.random()-.5)*7, vy:(Math.random()-.5)*7-1.5,
+    col: cols[Math.floor(Math.random()*cols.length)], life:55, sz: Math.random()*3.5+1.5,
+  });
+  var f=0; (function ani(){
+    X.clearRect(0,0,c.width,c.height); var a=0;
+    for(var pi=0;pi<pts.length;pi++){
+      var p=pts[pi]; if(p.life--<=0) continue; a=1; p.x+=p.vx; p.y+=p.vy; p.vy+=0.09;
+      X.beginPath(); X.arc(p.x,p.y,p.sz*(p.life/55),0,Math.PI*2);
+      X.fillStyle=p.col; X.globalAlpha=p.life/55; X.fill();
+    } X.globalAlpha=1;
+    if(a&&f<100) { f++; requestAnimationFrame(ani); } else c.remove();
+  })();
+}
+
+// ============ Toast ============
+function toast(msg) {
+  var t = document.createElement('div'); t.className='toast'; t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(function(){ t.style.opacity='0'; t.style.transition='opacity 0.3s'; }, 1800);
+  setTimeout(function(){ t.remove(); }, 2200);
+}
+
+// ============ 初始化 ============
+updHome(); renderPend();
+</script>
+</body>
+</html>
