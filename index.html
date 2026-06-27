@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>⭐ 我的积分星球 v3.1</title>
+<title>⭐ 我的积分星球 v3.2</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&display=swap');
@@ -532,7 +532,7 @@
   var isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
   if (!isLocal) return;
   // 本地预览总是模拟 85 分状态
-  if (!localStorage.getItem('kids_points_v3') || localStorage.getItem('kids_points_v3').indexOf('"score":85') === -1) {
+  if (!localStorage.getItem('kids_points_v3')) {
   localStorage.setItem('kids_points_v3', JSON.stringify({
     score: 85, baseGiven: true, pwd: '1234',
     wkCount: 8, wkReset: Date.now(), wkBonusGiven: false,
@@ -561,6 +561,7 @@
       '运动20分钟': { count:0, lastDate:'', doneToday:'', bonuses:{} }
     }
   }));
+  }
 })();
 </script>
 
@@ -882,7 +883,7 @@ function doConfirmPend(id) {
   var qty = i.q || 1;
   var totalPts = i.p * qty;
   D.score += totalPts;
-  D.logs.unshift({ type:'earn', n:(qty>1?i.n+' \u00D7'+qty:i.n), p:totalPts, t:i.t, q:qty });
+  if(!Array.isArray(D.logs))D.logs=[];D.logs.unshift({ type:'earn', n:(qty>1?i.n+' \u00D7'+qty:i.n), p:totalPts, t:i.t, q:qty });
   var task = D.tasks.find(function(t){return t.n===i.n;});
   if (task && task.cat === 'focus') {
     chkWeek();
@@ -899,7 +900,7 @@ function doConfirmPend(id) {
   D.pend = D.pend.filter(function(x){return x.id!==id;});
   sv();
   renderPend(); updHome(); fw();
-  toast('\u79EF\u5206\u5165\u8D26 +' + totalPts + '\u5206 \u2705');
+  toast('积分入账 +' + totalPts + '分 ✅（共' + D.logs.length + '条记录）');
 }
 
 function updateStreak(name) {
@@ -930,7 +931,7 @@ function updateStreak(name) {
   if (s.count >= 7 && !s.bonuses['7']) {
     s.bonuses['7'] = true;
     D.score += 20;
-    D.logs.unshift({ type:'earn', n:'\uD83C\uDFC6 ' + name + ' \u8FDE\u7EAD7\u5929\u5956\u52B1', p:20, t:new Date().toLocaleString('zh-CN') });
+    if(!Array.isArray(D.logs))D.logs=[];D.logs.unshift({ type:'earn', n:'\uD83C\uDFC6 ' + name + ' \u8FDE\u7EAD7\u5929\u5956\u52B1', p:20, t:new Date().toLocaleString('zh-CN') });
     sv();
     setTimeout(function(){ alert('\uD83C\uDF89 ' + name + ' \u8FDE\u7EAD7\u5929\uFF01+20\u5206\u5DF2\u81EA\u52A8\u53D1\u653E\uFF01'); }, 300);
   }
@@ -938,7 +939,7 @@ function updateStreak(name) {
   if (s.count >= 21 && !s.bonuses['21']) {
     s.bonuses['21'] = true;
     D.score += 60;
-    D.logs.unshift({ type:'earn', n:'\uD83C\uDF1F ' + name + ' \u8FDE\u7EAD21\u5929\u5956\u52B1', p:60, t:new Date().toLocaleString('zh-CN') });
+    if(!Array.isArray(D.logs))D.logs=[];D.logs.unshift({ type:'earn', n:'\uD83C\uDF1F ' + name + ' \u8FDE\u7EAD21\u5929\u5956\u52B1', p:60, t:new Date().toLocaleString('zh-CN') });
     sv();
     setTimeout(function(){ alert('\uD83C\uDF1F ' + name + ' \u8FDE\u7EAD21\u5929\uFF01+60\u5206\u5DF2\u81EA\u52A8\u53D1\u653E\uFF01'); }, 300);
   }
@@ -948,7 +949,7 @@ function giveWeekBonus() {
   document.getElementById('weekBonusMo').classList.remove('show');
   D.score += 20;
   D.wkBonusGiven = true;
-  D.logs.unshift({ type:'earn', n:'\uD83C\uDFC6 \u4E00\u546820\u4E2A\u756A\u8304\u949F\u5956\u52B1', p:20, t:new Date().toLocaleString('zh-CN') });
+  if(!Array.isArray(D.logs))D.logs=[];D.logs.unshift({ type:'earn', n:'\uD83C\uDFC6 \u4E00\u546820\u4E2A\u756A\u8304\u949F\u5956\u52B1', p:20, t:new Date().toLocaleString('zh-CN') });
   // 追踪周连击
   var thisWeek = D.wkReset;
   if (D.wkGoalLastWeek !== thisWeek) {
@@ -959,7 +960,7 @@ function giveWeekBonus() {
     if (D.wkGoalStreak >= 4 && !D.wkGoalBonuses['4']) {
       D.wkGoalBonuses['4'] = true;
       D.score += 120;
-      D.logs.unshift({ type:'earn', n:'\uD83C\uDF1F \u8FDE\u7EAD4\u5468\u8FBE\u621020\u4E2A\u756A\u8304\u949F\uFF01', p:120, t:new Date().toLocaleString('zh-CN') });
+      if(!Array.isArray(D.logs))D.logs=[];D.logs.unshift({ type:'earn', n:'\uD83C\uDF1F \u8FDE\u7EAD4\u5468\u8FBE\u621020\u4E2A\u756A\u8304\u949F\uFF01', p:120, t:new Date().toLocaleString('zh-CN') });
       setTimeout(function(){ alert('\uD83C\uDF1F \u592A\u68D2\u4E86\uFF01\u8FDE\u7EAD4\u5468\u5B8C\u621020\u4E2A\u756A\u8304\u949F\uFF01+120\u5206\uFF01'); }, 300);
     }
   }
@@ -971,7 +972,7 @@ function giveWeekBonus() {
 function addBasePoints() {
   if (D.baseGiven) { alert('\u57FA\u7840\u79EF\u5206\u5DF2\u53D1\u653E\u8FC7\uFF0C\u4E0D\u518D\u91CD\u590D\u53D1\u653E\u3002'); return; }
   D.score += 200;
-  D.logs.unshift({ type:'earn', n:'\u2B50 \u57FA\u7840\u79EF\u5206', p:200, t:new Date().toLocaleString('zh-CN') });
+  if(!Array.isArray(D.logs))D.logs=[];D.logs.unshift({ type:'earn', n:'\u2B50 \u57FA\u7840\u79EF\u5206', p:200, t:new Date().toLocaleString('zh-CN') });
   D.baseGiven = true;
   sv(); updHome(); fw();
   toast('\u57FA\u7840\u79EF\u5206+200\u5DF2\u53D1\u653E \u2B50');
@@ -997,7 +998,7 @@ function openParentPanel() {
 function closeParentPanel() {
   document.getElementById('parentPanel').classList.remove('show');
   document.getElementById('normalUI').style.display = '';
-  updHome(); renderPend();
+  updHome(); renderPend(); renderLog();
 }
 function renderPP() {
   chkWeek();
@@ -1169,24 +1170,34 @@ function openChgPwd() {
 
 // ============ 日志 ============
 function renderLog() {
-  updHome();
-  renderChart();
-  var el = document.getElementById('logList');
-  if (!D.logs || !D.logs.length) { el.innerHTML = '<div class="empty"><div class="eicon">📜</div>还没有积分记录哦<br><span style="font-size:12px;color:#bbb;">完成任务并经家长确认后，记录会显示在这里</span></div>'; return; }
-  el.innerHTML = '';
-  for (var li = 0; li < D.logs.length; li++) {
-    (function(l) {
-      var div = document.createElement('div');
-      div.className = 'log-item slide';
-      var dotColor = l.type === 'earn' ? 'var(--green)' : 'var(--pink)';
-      var cls = l.type === 'redeem' ? 'minus' : 'plus';
-      var sign = l.type === 'earn' ? '+' : '-';
-      div.innerHTML =
-        '<div class="log-dot" style="background:' + dotColor + ';"></div>' +
-        '<div style="flex:1;"><div class="log-name">' + l.n + '</div><div class="log-time">' + l.t + '</div></div>' +
-        '<div class="log-pts ' + cls + '">' + sign + l.p + '\u5206</div>';
-      el.appendChild(div);
-    })(D.logs[li]);
+  try {
+    var el = document.getElementById('logList');
+    if (!el) return;
+    var logs = D.logs;
+    if (!Array.isArray(logs)) logs = [];
+    if (!logs.length) {
+      el.innerHTML = '<div class="empty"><div class="eico">📜</div>还没有积分记录哦<br><span style="font-size:12px;color:#bbb;">完成任务并经家长确认后，记录会显示在这里</span></div>';
+      return;
+    }
+    try { renderChart(); } catch(e) { console.error('Chart error:', e); }
+    el.innerHTML = '';
+    for (var li = 0; li < logs.length; li++) {
+      (function(l) {
+        var div = document.createElement('div');
+        div.className = 'log-item slide';
+        var dotColor = l.type === 'earn' ? 'var(--green)' : 'var(--pink)';
+        var cls = l.type === 'redeem' ? 'minus' : 'plus';
+        var sign = l.type === 'earn' ? '+' : '-';
+        div.innerHTML =
+          '<div class="log-dot" style="background:' + dotColor + ';"></div>' +
+          '<div style="flex:1;"><div class="log-name">' + l.n + '</div><div class="log-time">' + l.t + '</div></div>' +
+          '<div class="log-pts ' + cls + '">' + sign + l.p + '分</div>';
+        el.appendChild(div);
+      })(logs[li]);
+    }
+  } catch(e) {
+    var el2 = document.getElementById('logList');
+    if (el2) el2.innerHTML = '<div class="empty"><div class="eico">⚠️</div>记录加载出错：' + e.message + '</div>';
   }
 }
 
@@ -1325,7 +1336,7 @@ function doRedeem() {
   var r = D.rewards[redeemIdx];
   if (D.score < r.c) { toast('\u79EF\u5206\u4E0D\u8DB3 \u274C'); closeRedeemMo(); return; }
   D.score -= r.c;
-  D.logs.unshift({ type:'redeem', n:'\uD83C\uDF81 ' + r.n, p:r.c, t:new Date().toLocaleString('zh-CN') });
+  if(!Array.isArray(D.logs))D.logs=[];D.logs.unshift({ type:'redeem', n:'\uD83C\uDF81 ' + r.n, p:r.c, t:new Date().toLocaleString('zh-CN') });
   sv(); closeRedeemMo(); renderRewards(); updHome(); fw();
   toast('\u5151\u6362\u6210\u529F \uD83C\uDF89');
 }
