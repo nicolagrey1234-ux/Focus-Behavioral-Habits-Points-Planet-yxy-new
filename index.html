@@ -571,9 +571,11 @@ function ld() {
       }
       if (!d.streaks) d.streaks = df().streaks;
       // 确保旧数据有 rewards 和 logs
-      if (!d.rewards || !Array.isArray(d.rewards) || !d.rewards.length) d.rewards = df().rewards;
-      if (!d.logs || !Array.isArray(d.logs)) d.logs = [];
-      if (!d.pend || !Array.isArray(d.pend)) d.pend = [];
+      var fixed = false;
+      if (!d.rewards || !Array.isArray(d.rewards) || !d.rewards.length) { d.rewards = df().rewards; fixed = true; }
+      if (!d.logs || !Array.isArray(d.logs)) { d.logs = []; fixed = true; }
+      if (!d.pend || !Array.isArray(d.pend)) { d.pend = []; fixed = true; }
+      if (fixed) localStorage.setItem(K, JSON.stringify(d));
       return d;
     }
   } catch(e){ console.error('load error', e); }
