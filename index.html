@@ -479,6 +479,10 @@
       <button class="pp-btn-purple" onclick="showPwd('chgPwd')">修改家长密码</button>
       <button class="pp-btn-pink" onclick="resetAll()" style="margin-top:8px;">重置所有数据</button>
       <button class="pp-btn-blue" onclick="addBasePoints()" style="margin-top:8px;">补充基础积分（+200分）</button>
+      <div style="margin-top:10px;display:flex;gap:6px;align-items:center;">
+        <input type="number" id="setScoreInput" placeholder="输入积分值如85" min="0" style="flex:1;padding:8px 10px;border:2px solid #E8E8E8;border-radius:8px;font-size:13px;font-family:inherit;">
+        <button class="pp-btn-green" onclick="setManualScore()" style="white-space:nowrap;padding:8px 16px;">✅ 确认修改</button>
+      </div>
     </div>
   </div>
 </div>
@@ -518,6 +522,47 @@
     </div>
   </div>
 </div>
+
+<script>
+
+// ============================================================
+// 🔧 本地预览模拟器：仅 localhost 生效，模拟手机端 85 分状态
+// ============================================================
+(function() {
+  var isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  if (!isLocal) return;
+  // 本地预览总是模拟 85 分状态
+  if (!localStorage.getItem('kids_points_v3') || localStorage.getItem('kids_points_v3').indexOf('"score":85') === -1) {
+  localStorage.setItem('kids_points_v3', JSON.stringify({
+    score: 85, baseGiven: true, pwd: '1234',
+    wkCount: 8, wkReset: Date.now(), wkBonusGiven: false,
+    wkGoalStreak: 0, wkGoalLastWeek: '', wkGoalBonuses: {},
+    pend: [], logs: [],
+    tasks: [
+      { n:'番茄钟 20分钟', p:2, e:'🍅', cat:'focus' },
+      { n:'语文阅读 20分钟', p:2, e:'📖', cat:'focus' },
+      { n:'英语阅读 20分钟', p:2, e:'📘', cat:'focus' },
+      { n:'运动20分钟', p:2, e:'⚽', cat:'focus' },
+      { n:'整理床铺', p:1, e:'🛏️', cat:'hygiene' },
+      { n:'回家洗手', p:1, e:'🧼', cat:'hygiene' },
+      { n:'玩具收好', p:1, e:'🧸', cat:'hygiene' },
+      { n:'整理书桌', p:1, e:'📝', cat:'hygiene' },
+      { n:'书本保持整洁', p:1, e:'📚', cat:'hygiene' }
+    ],
+    rewards: [
+      { n:'零食小奖励', c:15, e:'🍭' },
+      { n:'多玩15分钟', c:15, e:'🎮' },
+      { n:'小玩具', c:80, e:'🧸' },
+      { n:'篮球/足球', c:80, e:'⚽' },
+      { n:'周末郊游', c:300, e:'🏕️' }
+    ],
+    streaks: {
+      '英语阅读 20分钟': { count:0, lastDate:'', doneToday:'', bonuses:{} },
+      '运动20分钟': { count:0, lastDate:'', doneToday:'', bonuses:{} }
+    }
+  }));
+})();
+</script>
 
 <script>
 // 旧版本数据迁移（手机数据不会丢！）
@@ -933,6 +978,16 @@ function addBasePoints() {
   renderPP();
 }
 
+function setManualScore() {
+  var v = parseInt(document.getElementById('setScoreInput').value);
+  if (isNaN(v) || v < 0) { toast('\u8BF7\u8F93\u5165\u6709\u6548\u7684\u79EF\u5206\u503C \u274C'); return; }
+  var old = D.score;
+  D.score = v;
+  document.getElementById('setScoreInput').value = '';
+  sv(); updHome(); fw(); renderPP();
+  toast('\u2705 \u79EF\u5206\u5DF2\u4ECE ' + old + ' \u8C03\u6574\u4E3A ' + v + ' \u5206');
+}
+
 // ============ 家长面板 ============
 function openParentPanel() {
   document.getElementById('normalUI').style.display = 'none';
@@ -1144,16 +1199,32 @@ function renderChart() {
     showChartEmpty(canvas, '📊 图表加载中...');
     return;
   }
-  var daily = {};
   var logsCopy = (D.logs || []).slice().reverse();
+
+  // 用日志反推起始积分（当前积分 - 日志累计净变动 = 起始积分）
+  var netFromLogs = 0;
+  for (var ci = 0; ci < logsCopy.length; ci++) {
+    var l = logsCopy[ci];
+    netFromLogs += (l.type === 'earn' ? l.p : -l.p);
+  }
+  var baseScore = (parseInt(D.score) || 0) - netFromLogs;
+
+  // 按日汇总
+  var daily = {};
   for (var ci = 0; ci < logsCopy.length; ci++) {
     var l = logsCopy[ci];
     var dKey = l.t.split(' ')[0];
     if (!daily[dKey]) daily[dKey] = { e:0, r:0 };
     if (l.type==='earn') daily[dKey].e += l.p; else daily[dKey].r += l.p;
   }
+
   var lbs = [], dts = [];
-  var tot = 0;
+
+  // 始终以起始基数为第一个数据点
+  lbs.push('起始');
+  dts.push(baseScore);
+
+  var tot = baseScore;
   var keys = Object.keys(daily).sort();
   for (var ki = 0; ki < keys.length; ki++) {
     var k = keys[ki];
@@ -1161,12 +1232,7 @@ function renderChart() {
     lbs.push(k.slice(5));
     dts.push(tot);
   }
-  // 没有数据时显示提示
-  if (!lbs.length) {
-    showChartEmpty(canvas, '📊 还没有积分记录，快去攒积分吧！<br><span style="font-size:11px;color:#bbb;">完成第一个任务后这里会显示增长曲线</span>');
-    if (window._sc) { window._sc.destroy(); window._sc = null; }
-    return;
-  }
+
   // 清除空状态提示 + 恢复canvas
   var oldEmpty = canvas.parentNode.querySelector('.chart-empty');
   if (oldEmpty) oldEmpty.remove();
@@ -1174,15 +1240,15 @@ function renderChart() {
   if (window._sc) window._sc.destroy();
   window._sc = new Chart(ctx, {
     type:'line',
-    data:{ labels: lbs.length?lbs:['--'],
-      datasets:[{ data: dts.length?dts:[0],
+    data:{ labels: lbs,
+      datasets:[{ data: dts,
         borderColor:'#FF6B35', backgroundColor:'rgba(255,107,53,0.08)',
         fill:true, tension:0.35, pointBackgroundColor:'#FF6B35',
         pointRadius:3, borderWidth:2.5,
       }]
     },
     options:{ responsive:true, plugins:{ legend:{ display:false } },
-      scales:{ y:{ beginAtZero:true, grid:{color:'#F2F2F2'} }, x:{ grid:{display:false} } }
+      scales:{ y:{ beginAtZero:false, grid:{color:'#F2F2F2'} }, x:{ grid:{display:false} } }
     }
   });
 }
