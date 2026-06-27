@@ -377,6 +377,7 @@
       <div class="prog-bar-bg"><div class="prog-bar-fill" id="wkBar" style="width:0%"></div></div>
       <div class="pdesc">已完成 <b id="wkDone">0</b> / 20 个，达标额外 <span style="color:var(--pink);font-weight:700;">+20分</span>！</div>
       <div class="pdesc" id="wkGoalDesc" style="margin-top:4px;">连续达标 <b id="wkGoalStreakNum">0</b> / 4 周，达成奖励 <span style="color:var(--purple);font-weight:700;">+120分</span></div>
+      <div class="prog-bar-bg" style="margin-top:6px;"><div class="prog-bar-fill" id="wkGoalBar" style="width:0%;background:linear-gradient(90deg,#9B5DE5,#EF476F);"></div></div>
     </div>
 
     <div id="streakArea"></div>
@@ -569,6 +570,10 @@ function ld() {
         delete d.engReadStreak; delete d.engReadLastDate; delete d.engReadDoneToday; delete d.engStreakBonuses;
       }
       if (!d.streaks) d.streaks = df().streaks;
+      // 确保旧数据有 rewards 和 logs
+      if (!d.rewards || !Array.isArray(d.rewards) || !d.rewards.length) d.rewards = df().rewards;
+      if (!d.logs || !Array.isArray(d.logs)) d.logs = [];
+      if (!d.pend || !Array.isArray(d.pend)) d.pend = [];
       return d;
     }
   } catch(e){ console.error('load error', e); }
@@ -648,6 +653,7 @@ function updHome() {
   var wgs = D.wkGoalStreak || 0;
   var wg4 = D.wkGoalBonuses && D.wkGoalBonuses['4'];
   document.getElementById('wkGoalStreakNum').textContent = wgs;
+  document.getElementById('wkGoalBar').style.width = Math.min(100,wgs/4*100)+'%';
   document.getElementById('wkGoalDesc').innerHTML = '连续达标 <b>' + wgs + '</b> / 4 周' + (wg4 ? ' <span style="color:var(--green);">✅ 已获得</span>' : '，达成奖励 <span style="color:var(--purple);font-weight:700;">+120分</span>');
   renderStreaks();
   // badge
