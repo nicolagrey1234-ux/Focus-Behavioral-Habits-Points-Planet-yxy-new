@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>⭐ 我的积分星球 v3</title>
+<title>⭐ 我的积分星球 v3.1</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&display=swap');
@@ -376,8 +376,12 @@
       <div class="ptitle">🍅 本周番茄钟进度</div>
       <div class="prog-bar-bg"><div class="prog-bar-fill" id="wkBar" style="width:0%"></div></div>
       <div class="pdesc">已完成 <b id="wkDone">0</b> / 20 个，达标额外 <span style="color:var(--pink);font-weight:700;">+20分</span>！</div>
-      <div class="pdesc" id="wkGoalDesc" style="margin-top:4px;">连续达标 <b id="wkGoalStreakNum">0</b> / 4 周，达成奖励 <span style="color:var(--purple);font-weight:700;">+120分</span></div>
-      <div class="prog-bar-bg" style="margin-top:6px;"><div class="prog-bar-fill" id="wkGoalBar" style="width:0%;background:linear-gradient(90deg,#9B5DE5,#EF476F);"></div></div>
+    </div>
+
+    <div class="prog-box">
+      <div class="ptitle">🍅 番茄钟周连击</div>
+      <div class="prog-bar-bg"><div class="prog-bar-fill" id="wkGoalBar" style="width:0%;background:linear-gradient(90deg,#9B5DE5,#EF476F);"></div></div>
+      <div class="pdesc" id="wkGoalDesc">连续达标 <b id="wkGoalStreakNum">0</b> / 4 周，达成奖励 <span style="color:var(--purple);font-weight:700;">+120分</span></div>
     </div>
 
     <div id="streakArea"></div>
@@ -400,7 +404,9 @@
       <button onclick="addReward()">添加奖励 ✅</button>
     </div>
     <div class="sec-title">🎁 可兑换奖励</div>
-    <div class="reward-grid" id="rewardGrid"></div>
+    <div class="reward-grid" id="rewardGrid">
+      <div style="text-align:center;padding:40px 0;color:#999;font-size:14px;">🎁 加载奖励中...</div>
+    </div>
   </div>
 
   <div class="page" id="pg-pend">
@@ -542,6 +548,29 @@
       }
     }
   } catch(e) { console.error('Migration error', e); }
+  // 2. 修复 v3 数据缺失字段
+  try {
+    var rawV3 = localStorage.getItem('kids_points_v3');
+    if (rawV3) {
+      var vd = JSON.parse(rawV3);
+      var fixed = false;
+      if (!vd.rewards || !Array.isArray(vd.rewards) || !vd.rewards.length) {
+        vd.rewards = [
+          { n:'零食小奖励', c:15, e:'🍭' },
+          { n:'多玩15分钟', c:15, e:'🎮' },
+          { n:'小玩具', c:80, e:'🧸' },
+          { n:'篮球/足球', c:80, e:'⚽' },
+          { n:'周末郊游', c:300, e:'🏕️' },
+        ];
+        fixed = true;
+      }
+      if (!vd.logs || !Array.isArray(vd.logs)) { vd.logs = []; fixed = true; }
+      if (!vd.pend || !Array.isArray(vd.pend)) { vd.pend = []; fixed = true; }
+      if (!vd.streaks) { vd.streaks = { '英语阅读 20分钟': { count:0, lastDate:'', doneToday:'', bonuses:{} }, '运动20分钟': { count:0, lastDate:'', doneToday:'', bonuses:{} } }; fixed = true; }
+      if (!vd.tasks) { vd.tasks = []; fixed = true; }
+      if (fixed) { localStorage.setItem('kids_points_v3', JSON.stringify(vd)); }
+    }
+  } catch(e) { console.error('v3 fix error', e); }
 })();
 
 // ============ 数据 ============
@@ -570,12 +599,6 @@ function ld() {
         delete d.engReadStreak; delete d.engReadLastDate; delete d.engReadDoneToday; delete d.engStreakBonuses;
       }
       if (!d.streaks) d.streaks = df().streaks;
-      // 确保旧数据有 rewards 和 logs
-      var fixed = false;
-      if (!d.rewards || !Array.isArray(d.rewards) || !d.rewards.length) { d.rewards = df().rewards; fixed = true; }
-      if (!d.logs || !Array.isArray(d.logs)) { d.logs = []; fixed = true; }
-      if (!d.pend || !Array.isArray(d.pend)) { d.pend = []; fixed = true; }
-      if (fixed) localStorage.setItem(K, JSON.stringify(d));
       return d;
     }
   } catch(e){ console.error('load error', e); }
@@ -1094,7 +1117,7 @@ function renderLog() {
   updHome();
   renderChart();
   var el = document.getElementById('logList');
-  if (!D.logs.length) { el.innerHTML = '<div class="empty"><div class="eicon">\uD83D\uDCE7</div>\u8FD8\u6CA1\u6709\u8BB0\u5F55\u54E6</div>'; return; }
+  if (!D.logs || !D.logs.length) { el.innerHTML = '<div class="empty"><div class="eicon">📜</div>还没有积分记录哦<br><span style="font-size:12px;color:#bbb;">完成任务并经家长确认后，记录会显示在这里</span></div>'; return; }
   el.innerHTML = '';
   for (var li = 0; li < D.logs.length; li++) {
     (function(l) {
@@ -1113,21 +1136,41 @@ function renderLog() {
 }
 
 function renderChart() {
-  var ctx = document.getElementById('scoreChart').getContext('2d');
+  var canvas = document.getElementById('scoreChart');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  // Chart.js 未加载时显示友好提示
+  if (typeof Chart === 'undefined') {
+    showChartEmpty(canvas, '📊 图表加载中...');
+    return;
+  }
   var daily = {};
-  var logsCopy = D.logs.slice().reverse();
+  var logsCopy = (D.logs || []).slice().reverse();
   for (var ci = 0; ci < logsCopy.length; ci++) {
     var l = logsCopy[ci];
     var dKey = l.t.split(' ')[0];
     if (!daily[dKey]) daily[dKey] = { e:0, r:0 };
     if (l.type==='earn') daily[dKey].e += l.p; else daily[dKey].r += l.p;
   }
-  var tot = 0, lbs = [], dts = [];
-  Object.keys(daily).forEach(function(k) {
+  var lbs = [], dts = [];
+  var tot = 0;
+  var keys = Object.keys(daily).sort();
+  for (var ki = 0; ki < keys.length; ki++) {
+    var k = keys[ki];
     tot += daily[k].e - daily[k].r;
     lbs.push(k.slice(5));
     dts.push(tot);
-  });
+  }
+  // 没有数据时显示提示
+  if (!lbs.length) {
+    showChartEmpty(canvas, '📊 还没有积分记录，快去攒积分吧！<br><span style="font-size:11px;color:#bbb;">完成第一个任务后这里会显示增长曲线</span>');
+    if (window._sc) { window._sc.destroy(); window._sc = null; }
+    return;
+  }
+  // 清除空状态提示 + 恢复canvas
+  var oldEmpty = canvas.parentNode.querySelector('.chart-empty');
+  if (oldEmpty) oldEmpty.remove();
+  canvas.style.display = '';
   if (window._sc) window._sc.destroy();
   window._sc = new Chart(ctx, {
     type:'line',
@@ -1144,20 +1187,41 @@ function renderChart() {
   });
 }
 
+function showChartEmpty(canvas, msgHtml) {
+  // 隐藏空白的canvas
+  canvas.style.display = 'none';
+  // 先清除旧的
+  var box = canvas.parentNode;
+  var oldEmpty = box.querySelector('.chart-empty');
+  if (oldEmpty) oldEmpty.remove();
+  var msg = document.createElement('div');
+  msg.className = 'chart-empty';
+  msg.style.cssText = 'text-align:center;padding:50px 20px;color:#999;font-size:13px;line-height:1.8;';
+  msg.innerHTML = msgHtml;
+  box.appendChild(msg);
+}
+
 // ============ 奖励 ============
 function renderRewards() {
-  updHome();
+  try { updHome(); } catch(e) {}
   var el = document.getElementById('rewardGrid');
+  if (!el) return;
   el.innerHTML = '';
+  if (!D.rewards || !D.rewards.length) {
+    el.innerHTML = '<div class="empty"><div class="eicon">🎁</div>暂无奖励，去家长面板添加吧！</div>';
+    return;
+  }
+  var currentScore = parseInt(D.score) || 0;
   for (var ri = 0; ri < D.rewards.length; ri++) {
     (function(r, idx) {
-      var ok = D.score >= r.c;
+      var cost = parseInt(r.c) || 0;
+      var ok = currentScore >= cost;
       var card = document.createElement('div');
       card.className = 'rw-card slide' + (ok ? ' ok' : '');
       card.innerHTML =
         '<div class="rico">' + r.e + '</div>' +
         '<div class="rnm">' + r.n + '</div>' +
-        '<div class="rcost">' + r.c + ' \u79EF\u5206</div>' +
+        '<div class="rcost">' + cost + ' \u79EF\u5206</div>' +
         '<button class="rb-ok" ' + (ok?'':'disabled') + ' onclick="startRedeem(' + idx + ')">' +
         (ok?'\u5151\u6362 \uD83C\uDF89':'\u79EF\u5206\u4E0D\u8DB3') + '</button>';
       el.appendChild(card);
@@ -1277,7 +1341,12 @@ function toast(msg) {
 }
 
 // ============ 初始化 ============
-updHome(); renderPend();
+(function init() {
+  try { updHome(); } catch(e) { console.error('updHome error:', e); }
+  try { renderPend(); } catch(e) { console.error('renderPend error:', e); }
+  try { renderRewards(); } catch(e) { console.error('renderRewards error:', e); }
+  try { renderLog(); } catch(e) { console.error('renderLog error:', e); }
+})();
 </script>
 </body>
 </html>
