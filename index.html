@@ -433,9 +433,12 @@
     <div class="pp-section">
       <h3>🍅 本周番茄钟</h3>
       <p style="font-size:13px;color:#666;margin-bottom:10px;">本周已完成 <b id="ppWkCount">0</b> 个，达标自动发放+20分奖励。</p>
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
+        <input type="number" id="ppWkInput" placeholder="手动设置个数" min="0" style="flex:1;padding:6px 8px;border:2px solid #E8E8E8;border-radius:8px;font-size:12px;font-family:inherit;">
+        <button class="pp-btn-green" onclick="setWkCount()" style="white-space:nowrap;padding:6px 12px;font-size:12px;">✅ 确认修改</button>
+      </div>
       <button class="pp-btn-green" onclick="resetWeek()">重置本周计数</button>
-      <button class="pp-btn-purple" onclick="resetStreak('\u82F1\u8BED\u9605\u8BFB 20\u5206\u949F')">重置英语阅读连击</button>
-      <button class="pp-btn-purple" onclick="resetStreak('\u8FD0\u52A820\u5206\u949F')" style="margin-left:4px;">重置运动连击</button>
+      <button class="pp-btn-pink" onclick="undoWeekBonus()" style="margin-top:4px;">撤销周奖励（-20分）</button>
     </div>
 
     <div class="pp-section">
@@ -464,6 +467,8 @@
       <h3>📈 连击管理</h3>
       <p style="font-size:12px;color:#888;margin-bottom:8px;">开启连击后，每天完成此任务计入连续天数，7天+20分 / 21天+60分</p>
       <div id="ppStreakList"></div>
+      <button class="pp-btn-purple" onclick="resetStreak('\u82F1\u8BED\u9605\u8BFB 20\u5206\u949F')" style="margin-top:8px;">重置英语阅读连击</button>
+      <button class="pp-btn-purple" onclick="resetStreak('\u8FD0\u52A820\u5206\u949F')" style="margin-left:4px;">重置运动连击</button>
     </div>
 
     <div class="pp-section">
@@ -885,7 +890,7 @@ function doConfirmPend(id) {
   D.score += totalPts;
   if(!Array.isArray(D.logs))D.logs=[];D.logs.unshift({ type:'earn', n:(qty>1?i.n+' \u00D7'+qty:i.n), p:totalPts, t:i.t, q:qty });
   var task = D.tasks.find(function(t){return t.n===i.n;});
-  if (task && task.cat === 'focus') {
+  if (task && task.n.indexOf('\u756A\u8304\u949F') !== -1) {
     chkWeek();
     D.wkCount = (D.wkCount || 0) + qty;
     sv();
@@ -893,19 +898,25 @@ function doConfirmPend(id) {
       setTimeout(function(){ document.getElementById('weekBonusMo').classList.add('show'); }, 400);
     }
   }
-  // 连击追踪（英语阅读、运动等）
-  if (task && D.streaks && D.streaks[task.n]) {
-    updateStreak(task.n);
+  // 连击追踪
+  var streakMsg = '';
+  if (task) {
+    try {
+      updateStreak(task.n);
+      var cnt = (D.streaks[task.n] && D.streaks[task.n].count) || 0;
+      streakMsg = ' | 🔥 连续' + cnt + '天';
+    } catch(e) {}
   }
   D.pend = D.pend.filter(function(x){return x.id!==id;});
   sv();
   renderPend(); updHome(); fw();
-  toast('积分入账 +' + totalPts + '分 ✅（共' + D.logs.length + '条记录）');
+  toast('积分入账 +' + totalPts + '分 ✅' + streakMsg);
 }
 
 function updateStreak(name) {
+  D.streaks = D.streaks || {};
+  if (!D.streaks[name]) { D.streaks[name] = { count:0, lastDate:'', doneToday:'', bonuses:{} }; }
   var s = D.streaks[name];
-  if (!s) return;
   var today = new Date().toISOString().slice(0,10);
   if (s.doneToday === today) return;
 
@@ -950,9 +961,10 @@ function giveWeekBonus() {
   D.score += 20;
   D.wkBonusGiven = true;
   if(!Array.isArray(D.logs))D.logs=[];D.logs.unshift({ type:'earn', n:'\uD83C\uDFC6 \u4E00\u546820\u4E2A\u756A\u8304\u949F\u5956\u52B1', p:20, t:new Date().toLocaleString('zh-CN') });
-  // 追踪周连击
-  var thisWeek = D.wkReset;
-  if (D.wkGoalLastWeek !== thisWeek) {
+  // 追踪周连击（本周首次达标则 +1）
+  var thisWeek = String(D.wkReset);
+  var lastWeek = String(D.wkGoalLastWeek || '');
+  if (lastWeek !== thisWeek) {
     D.wkGoalStreak = (D.wkGoalStreak || 0) + 1;
     D.wkGoalLastWeek = thisWeek;
     D.wkGoalBonuses = D.wkGoalBonuses || {};
@@ -965,7 +977,7 @@ function giveWeekBonus() {
     }
   }
   sv(); updHome(); fw();
-  toast('\uD83C\uDFC6 \u5468\u5956\u52B1+20\u5206\u5DF2\u53D1\u653E\uFF01');
+  toast('\uD83C\uDFC6 \u5468\u5956\u52B1+20\u5206\uFF01\u5DF2\u8FDE\u7EED ' + D.wkGoalStreak + ' \u5468\u8FBE\u6807');
 }
 
 // ============ 补充基础积分 ============
@@ -1114,7 +1126,7 @@ function toggleStreak(name) {
 
 function ppConfirm(id) { doConfirmPend(id); renderPP(); }
 function ppReject(id) { D.pend = D.pend.filter(function(x){return x.id!==id;}); sv(); renderPP(); updHome(); }
-function resetWeek() { D.wkCount = 0; D.wkBonusGiven = false; D.wkReset = wkStart(); sv(); renderPP(); updHome(); toast('\u672C\u5468\u8BA1\u6570\u5DF2\u91CD\u7F6E \uD83D\uDD04'); }
+function resetWeek() { D.wkCount = 0; D.wkBonusGiven = false; D.wkReset = wkStart(); D.wkGoalLastWeek = ''; sv(); renderPP(); updHome(); toast('\u672C\u5468\u8BA1\u6570\u5DF2\u91CD\u7F6E \uD83D\uDD04'); }
 function resetStreak(name) {
   if (!confirm('\u786E\u5B9A\u91CD\u7F6E\u300C' + name + '\u300D\u8FDE\u51FB\u5417\uFF1F\u8FDE\u7EED\u5929\u6570\u5C06\u5F52\u96F6\u3002')) return;
   if (D.streaks && D.streaks[name]) {
@@ -1122,6 +1134,27 @@ function resetStreak(name) {
   }
   sv(); renderPP(); updHome();
   toast(name + ' \u8FDE\u51FB\u5DF2\u91CD\u7F6E');
+}
+
+function setWkCount() {
+  var v = parseInt(document.getElementById('ppWkInput').value);
+  if (isNaN(v) || v < 0) { toast('\u8BF7\u8F93\u5165\u6709\u6548\u7684\u6570\u5B57 \u274C'); return; }
+  var old = D.wkCount;
+  D.wkCount = v;
+  document.getElementById('ppWkInput').value = '';
+  sv(); renderPP(); updHome();
+  toast('\u2705 \u756A\u8304\u949F\u5DF2\u4ECE ' + old + ' \u8C03\u6574\u4E3A ' + v + ' \u4E2A');
+}
+
+function undoWeekBonus() {
+  if (!D.wkBonusGiven) { toast('\u672C\u5468\u8FD8\u6CA1\u6709\u53D1\u653E\u8FC7\u5468\u5956\u52B1'); return; }
+  D.score -= 20;
+  D.wkBonusGiven = false;
+  // 同步撤销周连击
+  if (D.wkGoalStreak > 0) D.wkGoalStreak--;
+  D.wkGoalLastWeek = '';
+  sv(); renderPP(); updHome();
+  toast('\uD83D\uDD04 \u5DF2\u64A4\u9500\u5468\u5956\u52B1\uFF0C-20\u5206\uFF0C\u53EF\u91CD\u65B0\u8FBE\u6807\u89E6\u53D1');
 }
 function ppDelReward(i) { D.rewards.splice(i,1); sv(); renderPP(); renderRewards(); toast('\u5956\u52B1\u5DF2\u5220\u9664'); }
 
