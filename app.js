@@ -1,5 +1,5 @@
 /* ============================================================
- *  积分星球 v3.3 — 低维护版本
+ *  积分星球 v3.5 — 低维护版本
  *
  *  核心设计：
  *    - 奖励用唯一 uid 定位，不再依赖数组下标
@@ -313,7 +313,7 @@ function reqPts(name, pts, qty) {
 
 function renderPend() {
   var el = document.getElementById('pendList');
-  if (!D.pend.length) { el.innerHTML = '<div class="empty"><div class="eicon">🎉</div>太棒了，没有待确认的了！</div>'; return; }
+  if (!D.pend.length) { el.innerHTML = '<div class="empty"><div class="eico">🎉</div>太棒了，没有待确认的了！</div>'; return; }
   el.innerHTML = '';
   for (var i = 0; i < D.pend.length; i++) {
     (function(item) {
@@ -334,6 +334,7 @@ function renderPend() {
 }
 
 function rejectPend(id) {
+  id = parseInt(id, 10);
   D.pend = D.pend.filter(function(i){return i.id!==id;});
   sv(); renderPend(); updHome();
   toast('已取消 ❌');
@@ -364,6 +365,7 @@ function checkPwd() {
 function pwdForConfirm(id) { showPwd('confirm', id); }
 
 function doConfirmPend(id) {
+  id = parseInt(id, 10);
   var i = D.pend.find(function(x){return x.id===id;}); if (!i) return;
   var qty = i.q || 1;
   var totalPts = i.p * qty;
@@ -394,6 +396,7 @@ function doConfirmPend(id) {
   }
 
   D.pend = D.pend.filter(function(x){return x.id!==id;});
+  taskQtys[i.n] = 1;  // 确认后重置数量选择器
   sv();
   renderPend(); updHome(); fw();
   toast('积分入账 +' + totalPts + '分 ✅' + streakMsg);
@@ -585,7 +588,10 @@ function renderPPStreaks() {
         '<span style="font-size:16px;">' + esc(t.e) + '</span> ' +
         '<span class="pp-tn">' + esc(t.n) + '</span>' +
         '</div>' +
-        '<button data-task-idx="' + idx + '" class="js-toggle-streak" style="background:' + (active ? '#06D6A0' : '#CCC') + ';color:' + (active ? '#FFF' : '#666') + ';border:none;border-radius:8px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">' + (active ? 'ON' : 'OFF') + '</button>';
+        '<div style="display:flex;align-items:center;gap:6px;">' +
+        '<button data-task-idx="' + idx + '" class="js-toggle-streak" style="background:' + (active ? '#06D6A0' : '#CCC') + ';color:' + (active ? '#FFF' : '#666') + ';border:none;border-radius:8px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">' + (active ? 'ON' : 'OFF') + '</button>' +
+        (active ? '<button onclick="resetStreak(\'' + escQ(t.n) + '\')" style="background:#EF476F;color:#FFF;border:none;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">↺</button>' : '') +
+        '</div>';
       el.appendChild(div);
     })(D.tasks[si], si);
   }
@@ -607,7 +613,7 @@ function toggleStreakByIndex(idx, btn) {
 }
 
 function ppConfirm(id) { doConfirmPend(id); renderPP(); }
-function ppReject(id) { D.pend = D.pend.filter(function(x){return x.id!==id;}); sv(); renderPP(); updHome(); }
+function ppReject(id) { id = parseInt(id, 10); D.pend = D.pend.filter(function(x){return x.id!==id;}); sv(); renderPP(); updHome(); }
 
 function resetWeek() {
   D.wkCount = 0; D.wkBonusGiven = false; D.wkReset = wkStart();
@@ -796,7 +802,7 @@ function renderRewards() {
   if (!el) return;
   el.innerHTML = '';
   if (!D.rewards || !D.rewards.length) {
-    el.innerHTML = '<div class="empty"><div class="eicon">🎁</div>暂无奖励，去家长面板添加吧！</div>';
+    el.innerHTML = '<div class="empty"><div class="eico">🎁</div>暂无奖励，去家长面板添加吧！</div>';
     return;
   }
   var currentScore = parseInt(D.score) || 0;
